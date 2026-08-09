@@ -60,10 +60,7 @@ FDMResult generate_matrix(const float step_size) {
   result.fdm_matrix = calloc(result.N * result.N, sizeof(double));
   if(result.fdm_matrix == nullptr) { return result; }
 
-  /*for(int i = 0; i < result.N; i++){
-    result.fdm_matrix[i] = malloc(result.N  * sizeof(int));
-    if(result.fdm_matrix[i] == nullptr) { return result; }
-  }*/
+
 
   result.sol_matrix = calloc(result.N, sizeof(double));
   if(result.sol_matrix == nullptr) { return result; }
@@ -74,6 +71,13 @@ FDMResult generate_matrix(const float step_size) {
 //So far it seems to work :)
   result.w = dimensions.w;
   result.h = dimensions.h;
+
+  for(int i=0; i < dimensions.h; i++){
+    free(ref_matrix[i]);
+  }
+  free(ref_matrix);
+
+
   return result;
 }
 
@@ -186,7 +190,7 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
           }
           else if(temp == TRACK_A){
             fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2); //NOTE not too sure about the addition here
-            //In the lab the +5V was on the peerm_1 area, so I assume if the track is on the interface we add both perms???
+            //In the lab the +5V was on the perm_1 area, so I assume if the track is on the interface we add both perms???
           }
           else if(temp == TRACK_B){
             fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2);

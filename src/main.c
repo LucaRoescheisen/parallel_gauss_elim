@@ -41,5 +41,11 @@ int main()  {
     fprintf(fp, "\n");
   }
   fclose(fp);
+
+
+
+  free(r.fdm_matrix);
+  free(r.sol_matrix);
+  free(x);
    return 0;
 }
