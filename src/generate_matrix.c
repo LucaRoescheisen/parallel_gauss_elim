@@ -56,14 +56,15 @@ void generate_matrix(const int step_size) {
 
   //Second run generate FDM Matrix
   int** fdm_matrix = malloc(((dimensions.h - 2)* (dimensions.w-2)) * sizeof(int*));
-  if(fdm_matrix == NULL) { return; }
+  if(fdm_matrix == nullptr) { return; }
 
   for(int i = 1; i < ((dimensions.h - 2)* (dimensions.w-2)); i++){
     fdm_matrix[i] = malloc(((dimensions.h - 2)* (dimensions.w-2))  * sizeof(int));
-    if(fdm_matrix[i] == NULL) { return; }
+    if(fdm_matrix[i] == nullptr) { return; }
   }
 
   double* sol_matrix = malloc(((dimensions.h-2) * (dimensions.w-2))*sizeof(double));
+  if(sol_matrix == nullptr) { return; }
   for(int i = 0; i < ((dimensions.h-2) * (dimensions.w-2)); i++) {sol_matrix[i] = 0;}
 }
 
@@ -130,14 +131,12 @@ bool validate_step_size(const int step_size) {
 
 
 void populate_fdm(int** ref_matrix, int** fdm_matrix, double* sol_matrix, struct Dimensions dimensions){
-  static int dirs[4][2] = {
+  constexpr int dirs[4][2] = {
     {-1,0},
     {1, 0},
     {0, 1},
     {0,-1}
   };
-
-
   int fdm_row = 0;
   for(int row = 1; row < dimensions.h - 1; row++){ //We skip outer GND edge
     for(int col = 1; col < dimensions.w - 1; col++){
@@ -154,7 +153,7 @@ void populate_fdm(int** ref_matrix, int** fdm_matrix, double* sol_matrix, struct
         int x = row + dirs[i][0];
         int y= col + dirs[i][1];
         if(current_node == FREE_SPACE || current_node == PCB) {
-          fdm_matrix[fdm_row][x*y] = 1;
+          fdm_matrix[fdm_row][x* y] = 1;
         }
         else if(current_node == INTERFACE_TOP) {
 
