@@ -6,14 +6,15 @@
 //Function Prototypes
 bool validate_step_size(int step_size);
 void classify_nodes(int** matrix, struct Dimensions dimensions);
-void populate_fdm(int** ref_matrix, int** fdm_matrix, double* sol_matrix, struct Dimensions dimensions);
+void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N);
 
 
 
-void generate_matrix(const int step_size) {
+FDMResult generate_matrix(const int step_size) {
 
+  FDMResult result = {.fdm_matrix = nullptr, .sol_matrix=nullptr};
   if(!validate_step_size(step_size)) { 
-    return; 
+    return result; 
   }
   struct Dimensions dimensions  = {0};
   //Generate Matrix given step_size and parameters
@@ -33,14 +34,14 @@ void generate_matrix(const int step_size) {
    dimensions.y_track_a =  (TRACK_A_Y/step_size);
    dimensions.y_track_b =  (TRACK_B_Y/step_size);
 
-
+  result.N = (dimensions.h-2) *(dimensions.w-2);
   //Generate 2D Matrix
   int** ref_matrix = malloc(dimensions.h * sizeof(int*));
-  if(ref_matrix == NULL) { return; }
+  if(ref_matrix == nullptr) { return result; }
 
   for(int i = 0; i < dimensions.h; i++){
     ref_matrix[i] = malloc(dimensions.w * sizeof(int));
-    if(ref_matrix[i] == NULL) { return; }
+    if(ref_matrix[i] == nullptr) { return result; }
   }
 
   classify_nodes(ref_matrix, dimensions);
@@ -53,19 +54,24 @@ void generate_matrix(const int step_size) {
     printf("\n");
   }
 
-
+  
   //Second run generate FDM Matrix
-  int** fdm_matrix = malloc(((dimensions.h - 2)* (dimensions.w-2)) * sizeof(int*));
-  if(fdm_matrix == nullptr) { return; }
+  result.fdm_matrix = calloc(result.N * result.N, sizeof(double));
+  if(result.fdm_matrix == nullptr) { return result; }
 
-  for(int i = 1; i < ((dimensions.h - 2)* (dimensions.w-2)); i++){
-    fdm_matrix[i] = malloc(((dimensions.h - 2)* (dimensions.w-2))  * sizeof(int));
-    if(fdm_matrix[i] == nullptr) { return; }
-  }
+  /*for(int i = 0; i < result.N; i++){
+    result.fdm_matrix[i] = malloc(result.N  * sizeof(int));
+    if(result.fdm_matrix[i] == nullptr) { return result; }
+  }*/
 
-  double* sol_matrix = malloc(((dimensions.h-2) * (dimensions.w-2))*sizeof(double));
-  if(sol_matrix == nullptr) { return; }
-  for(int i = 0; i < ((dimensions.h-2) * (dimensions.w-2)); i++) {sol_matrix[i] = 0;}
+  result.sol_matrix = calloc(result.N, sizeof(double));
+  if(result.sol_matrix == nullptr) { return result; }
+  for(int i = 0; i < result.N; i++) {result.sol_matrix[i] = 0;}
+
+
+  populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N);
+//So far it seems to work :)
+  return result;
 }
 
 
@@ -85,16 +91,16 @@ void classify_nodes(int** matrix, struct Dimensions dimensions) {
         matrix[row][col] = TRACK_B;
       }
       else if(row == dimensions.y_pcb && (col > dimensions.x_pcb && col < (dimensions.x_pcb + dimensions.w_pcb))){
-        matrix[row][col] = INTERFACE_TOP;
+        matrix[row][col] = INTERFACE;
       }
       else if(row == (dimensions.y_pcb + dimensions.h_pcb ) && (col > dimensions.x_pcb && col < (dimensions.x_pcb + dimensions.w_pcb))){
-        matrix[row][col] = INTERFACE_BOTTOM;
+        matrix[row][col] = INTERFACE;
       }
       else if((row > dimensions.y_pcb &&  row < dimensions.y_pcb + dimensions.h_pcb) && (col == dimensions.x_pcb)){
-        matrix[row][col] = INTERFACE_LEFT;
+        matrix[row][col] = INTERFACE;
       }
       else if(row > dimensions.y_pcb &&  (row < dimensions.y_pcb + dimensions.h_pcb) && col == (dimensions.x_pcb + dimensions.w_pcb)){
-        matrix[row][col] = INTERFACE_RIGHT;
+        matrix[row][col] = INTERFACE;
       }
       else if((row == dimensions.y_pcb && col == dimensions.x_pcb) || (row == dimensions.y_pcb && col == (dimensions.x_pcb + dimensions.w_pcb)) ||
              (row == (dimensions.y_pcb + dimensions.h_pcb) && col == dimensions.x_pcb) || (row == (dimensions.y_pcb + dimensions.h_pcb) && col == (dimensions.x_pcb + dimensions.w_pcb))){
@@ -130,7 +136,7 @@ bool validate_step_size(const int step_size) {
 
 
 
-void populate_fdm(int** ref_matrix, int** fdm_matrix, double* sol_matrix, struct Dimensions dimensions){
+void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N){
   constexpr int dirs[4][2] = {
     {-1,0},
     {1, 0},
@@ -141,40 +147,47 @@ void populate_fdm(int** ref_matrix, int** fdm_matrix, double* sol_matrix, struct
   for(int row = 1; row < dimensions.h - 1; row++){ //We skip outer GND edge
     for(int col = 1; col < dimensions.w - 1; col++){
       int current_node = ref_matrix[row][col];
-      if(current_node == FREE_SPACE || current_node == PCB) {fdm_matrix[fdm_row][row*col] = -4;}
-      else if(current_node == TRACK_A) {sol_matrix[fdm_row] = -TRACK_A_VOLTAGE;}
-      else if(current_node == TRACK_B) {sol_matrix[fdm_row] = -TRACK_B_VOLTAGE;}
-      else if(current_node == INTERFACE_LEFT) { sol_matrix[fdm_row] = 67;} //heh 
-      else if(current_node == INTERFACE_RIGHT) { sol_matrix[fdm_row] = 67;} //heh 
-      else if(current_node == INTERFACE_TOP) { sol_matrix[fdm_row] = 67;} //heh 
-      else if(current_node == INTERFACE_BOTTOM) { sol_matrix[fdm_row] = 67;} //heh 
-      else if(current_node == INTERFACE_CORNER) { sol_matrix[fdm_row] = 67;} //heh 
+      if(current_node == FREE_SPACE || current_node == PCB) {fdm_matrix[fdm_row* N +fdm_row] = -4;}
+      else if(current_node == TRACK_A) {
+        sol_matrix[fdm_row] = -TRACK_A_VOLTAGE;
+        fdm_matrix[fdm_row * N + fdm_row] = 1;
+      }
+      else if(current_node == TRACK_B) {
+        sol_matrix[fdm_row] = -TRACK_B_VOLTAGE;
+        fdm_matrix[fdm_row * N + fdm_row] = 1;
+      }
+      else if(current_node == INTERFACE) { fdm_matrix[fdm_row * N + fdm_row] = -4*(PERM_1 + PERM_2);}
+      else if(current_node == INTERFACE_CORNER) { fdm_matrix[fdm_row * N + fdm_row] = (-6*PERM_1 + 2*PERM_2);}
       for(int i = 0; i < 3; i++){
         int x = row + dirs[i][0];
         int y= col + dirs[i][1];
-        if(current_node == FREE_SPACE || current_node == PCB) {
-          fdm_matrix[fdm_row][x* y] = 1;
+        int temp = ref_matrix[x][y]; // stop redundant calculations
+        int neighbour = (x-1)*(dimensions.w-2) + (y-1);
+        if((current_node == FREE_SPACE || current_node == PCB) && temp != GND) {
+          fdm_matrix[fdm_row * N + neighbour] = 1;
         }
-        else if(current_node == INTERFACE_TOP) {
-
+        else if(current_node == INTERFACE || current_node == INTERFACE_CORNER) {
+          if(temp == FREE_SPACE) {
+            fdm_matrix[fdm_row * N + neighbour] = 2 * PERM_1;  
+          }
+          else if(temp == PCB) {
+            fdm_matrix[fdm_row * N + neighbour] = 2 * PERM_2;
+          }
+          else if(temp == INTERFACE || temp == INTERFACE_CORNER) {
+            fdm_matrix[fdm_row * N + neighbour] = PERM_1 + PERM_2;
+          }
+          else if(temp == TRACK_A){
+            sol_matrix[fdm_row] = -2*TRACK_A_VOLTAGE*(PERM_1 + PERM_2); //NOTE not too sure about the addition here
+            //In the lab the +5V was on the peerm_1 area, so I assume if the track is on the interface we add both perms???
+          }
+          else if(temp == TRACK_B){
+            sol_matrix[fdm_row] = -2*TRACK_B_VOLTAGE*(PERM_1 + PERM_2);
+          }
         }
-
-          
-
       }
-
-
-
-
-
-
-
-
-
-
-      
       fdm_row++;
     }
   }
-    
+  
+  
 }

@@ -33,10 +33,7 @@ typedef enum {
   TRACK_A,
   TRACK_B,
   INTERFACE_CORNER,
-  INTERFACE_TOP,
-  INTERFACE_LEFT,
-  INTERFACE_BOTTOM,
-  INTERFACE_RIGHT
+  INTERFACE
 } NodeType;
 
 struct Dimensions {
@@ -56,5 +53,11 @@ struct Dimensions {
    int y_track_b;
 };
 
-void generate_matrix(int step_size);
+typedef struct {
+  double* fdm_matrix;
+  double* sol_matrix;
+  int N;
+} FDMResult;
+
+FDMResult generate_matrix(int step_size);
 #endif
