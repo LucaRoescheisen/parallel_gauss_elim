@@ -8,9 +8,15 @@
 
 int main()  {
 
-  int step_size = 1;
-  FDMResult r = generate_matrix(1);
-  
+  float step_size = 0.5;
+  //Tip dont use a stepsize less than this, otherwise calloc will use approx 70GB of RAM which is non existent and
+  //CPU cores start swap-thrashing :(
+
+  FDMResult r = generate_matrix(step_size);
+  if(r.fdm_matrix == nullptr || r.sol_matrix == nullptr || r.N == 0){
+    fprintf(stderr, "generate matrix failed");
+    return 1;
+  }
   double* x = malloc(r.N * sizeof(double));
   if(x == nullptr) return 0 ;
   
@@ -23,6 +29,17 @@ int main()  {
     printf("%f,", x[i]);
   }
   printf("Finished");
-
+  
+  FILE *fp = fopen("output.dat", "w");
+  for(int i = 0; i < r.h; i++){
+    for(int j = 0; j < r.w; j++){
+      if(i> 0 && i < r.h - 1 && j > 0 && j < r.w -1){
+        int idx = (i-1) * (r.w-2) + (j-1);
+        fprintf(fp, "%i %i %f\n", i,j, x[idx]);
+      }
+    }
+    fprintf(fp, "\n");
+  }
+  fclose(fp);
    return 0;
 }

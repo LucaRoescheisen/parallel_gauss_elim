@@ -25,6 +25,7 @@
 #define PERM_1 1
 #define PERM_2 4.8
 
+#define STEP_EPSILON 1e-3f
 
 typedef enum {
   FREE_SPACE,
@@ -57,7 +58,8 @@ typedef struct {
   double* fdm_matrix;
   double* sol_matrix;
   int N;
+  int w, h;
 } FDMResult;
 
-FDMResult generate_matrix(int step_size);
+FDMResult generate_matrix(float step_size);
 #endif
