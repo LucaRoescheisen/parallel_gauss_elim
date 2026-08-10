@@ -10,7 +10,6 @@ void classify_nodes(int** matrix, struct Dimensions dimensions);
 void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N);
 
 
-
 FDMResult generate_matrix(const float step_size) {
 
   FDMResult result = {.fdm_matrix = nullptr, .sol_matrix=nullptr};
@@ -45,7 +44,10 @@ FDMResult generate_matrix(const float step_size) {
     ref_matrix[i] = malloc(dimensions.w * sizeof(int));
     if(ref_matrix[i] == nullptr) { return result; }
   }
+
+
   classify_nodes(ref_matrix, dimensions);
+
 
   //DEBUG PRINT :) 
   for(int i = 0; i < dimensions.h; i++){
@@ -68,6 +70,11 @@ FDMResult generate_matrix(const float step_size) {
 
 
   populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N);
+  
+
+
+
+
 //So far it seems to work :)
   result.w = dimensions.w;
   result.h = dimensions.h;
@@ -143,8 +150,6 @@ bool validate_step_size(const float step_size) {
         && divides((TRACK_A_START_X + TRACK_WIDTH) , step_size)
         && divides((TRACK_B_START_X + TRACK_WIDTH) , step_size);
 }
-
-
 
 
 
