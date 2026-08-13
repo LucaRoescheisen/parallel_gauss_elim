@@ -101,6 +101,7 @@ void classify_nodes(int** matrix, struct Dimensions dimensions) {
       else if(row == dimensions.y_track_a && col >= (dimensions.x_track_a) && col <= (dimensions.x_track_a + dimensions.w_track)) {
         matrix[row][col] = TRACK_A;
       }
+      // NOTE: I changed this assuming that TRACK_WIDTH is copper width in cm, i think thats right but leaving this here in case not
       else if(row == dimensions.y_track_b && col >= (dimensions.x_track_b) && col <= (dimensions.x_track_b + dimensions.w_track)) {
         matrix[row][col] = TRACK_B;
       }
