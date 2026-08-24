@@ -1,6 +1,8 @@
+#define _GNU_SOURCE
 #include <math.h>
 #include "../include/thread_handler.h"
 #include <unistd.h>
+#include <pthread.h>
 #include <math.h>
 
 typedef struct {
@@ -15,19 +17,30 @@ typedef struct {
 
 }Thread_Data;
 
+pthread_barrier_t barrier_start;
+pthread_barrier_t barrier_finished;
+int system_finished = 0;
+
 
 
 void *worker(void *arg) {
   Thread_Data *td = (Thread_Data *)arg;
   double f;
-  for (int i = 0; i < td->length; i++) {
-		f = td->chunk_A[i * td->n + td->j] / td->pivot;
-		for (int k = 0; k < td->n; k++) {
-			td->chunk_A[i * td->n + k] -= f * td->pivot_row[k];
-		}
-		td->chunk_B[i] -= f * td->pivot_b;
-	}
-  return NULL;
+
+  while(1){
+    pthread_barrier_wait(&barrier_start);
+    if(system_finished) {break;}
+
+    for (int i = 0; i < td->length; i++) {
+		  f = td->chunk_A[i * td->n + td->j] / td->pivot;
+		  for (int k = 0; k < td->n; k++) {
+			  td->chunk_A[i * td->n + k] -= f * td->pivot_row[k];
+		  }
+		  td->chunk_B[i] -= f * td->pivot_b;
+	  }
+    pthread_barrier_wait(&barrier_finished);
+  }
+    return NULL;
 }
 
 
@@ -37,7 +50,13 @@ void pgaussElim(double A[], double b[], double x[], int n, Thread_Pool* pool)
 	double pivot, f, sum, max, temp;
 
   Thread_Data td[pool->num_threads];
+  
+  pthread_barrier_init(&barrier_start, NULL, pool->num_threads + 1);
+  pthread_barrier_init(&barrier_finished, NULL, pool->num_threads + 1);
 
+  for(int w = 0; w<pool->num_threads; w++){
+    pthread_create(&pool->threads[w], NULL, worker, &td[w]);
+  }
 
 	for (j = 0; j < n - 1; j++) {
 
@@ -60,17 +79,16 @@ void pgaussElim(double A[], double b[], double x[], int n, Thread_Pool* pool)
       td[w].pivot = pivot;
       td[w].n = n;
       offset += count;
-
-      pthread_create(&pool->threads[w], NULL, worker, &td[w]);
     }
-    
-    for(int w = 0; w < pool->num_threads; w++){
-      pthread_join(pool->threads[w], NULL);
-    }
-
-    
+    pthread_barrier_wait(&barrier_start);
+    pthread_barrier_wait(&barrier_finished); 
 	}
 
+  system_finished = 1;
+  pthread_barrier_wait(&barrier_start);
+  for(int w = 0; w < pool->num_threads; w++){
+      pthread_join(pool->threads[w], NULL);
+  }
   
 
 	// back substitution stage
