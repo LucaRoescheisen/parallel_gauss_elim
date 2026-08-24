@@ -10,7 +10,6 @@ void classify_nodes(int** matrix, struct Dimensions dimensions);
 void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N);
 
 
-
 FDMResult generate_matrix(const float step_size) {
 
   FDMResult result = {.fdm_matrix = nullptr, .sol_matrix=nullptr};
@@ -22,8 +21,8 @@ FDMResult generate_matrix(const float step_size) {
   //Generate Matrix given step_size and parameters
   
   //Board dimensions
-   dimensions.w = (int)roundf(WIDTH/step_size);
-   dimensions.h =  (int)roundf(HEIGHT/step_size);
+   dimensions.w = (int)roundf(WIDTH/step_size) + 1;
+   dimensions.h =  (int)roundf(HEIGHT/step_size) + 1;
   //PCB placement
    dimensions.w_pcb =  (int)roundf(PCB_WIDTH/step_size);
    dimensions.h_pcb =  (int)roundf(PCB_HEIGHT/step_size);
@@ -45,7 +44,10 @@ FDMResult generate_matrix(const float step_size) {
     ref_matrix[i] = malloc(dimensions.w * sizeof(int));
     if(ref_matrix[i] == nullptr) { return result; }
   }
+
+
   classify_nodes(ref_matrix, dimensions);
+
 
   //DEBUG PRINT :) 
   for(int i = 0; i < dimensions.h; i++){
@@ -68,6 +70,11 @@ FDMResult generate_matrix(const float step_size) {
 
 
   populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N);
+  
+
+
+
+
 //So far it seems to work :)
   result.w = dimensions.w;
   result.h = dimensions.h;
@@ -91,10 +98,11 @@ void classify_nodes(int** matrix, struct Dimensions dimensions) {
       if(row == 0 || col == 0 || row == dimensions.h-1 || col == dimensions.w-1){ //GND
         matrix[row][col] = GND;
       }
-      else if(row == dimensions.y_track_a && col >= (dimensions.x_track_a) && col < (dimensions.x_track_a + dimensions.w_track)) {
+      else if(row == dimensions.y_track_a && col >= (dimensions.x_track_a) && col <= (dimensions.x_track_a + dimensions.w_track)) {
         matrix[row][col] = TRACK_A;
       }
-      else if(row == dimensions.y_track_b && col >= (dimensions.x_track_b) && col < (dimensions.x_track_b + dimensions.w_track - 1)) {
+      // NOTE: I changed this assuming that TRACK_WIDTH is copper width in cm, i think thats right but leaving this here in case not
+      else if(row == dimensions.y_track_b && col >= (dimensions.x_track_b) && col <= (dimensions.x_track_b + dimensions.w_track)) {
         matrix[row][col] = TRACK_B;
       }
       else if(row == dimensions.y_pcb && (col > dimensions.x_pcb && col < (dimensions.x_pcb + dimensions.w_pcb))){
@@ -146,8 +154,6 @@ bool validate_step_size(const float step_size) {
 
 
 
-
-
 void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N){
   constexpr int dirs[4][2] = {
     {-1,0},
@@ -161,11 +167,11 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
       int current_node = ref_matrix[row][col];
       if(current_node == FREE_SPACE || current_node == PCB) {fdm_matrix[fdm_row* N +fdm_row] = -4;}
       else if(current_node == TRACK_A) {
-        sol_matrix[fdm_row] = -TRACK_A_VOLTAGE;
+        sol_matrix[fdm_row] = TRACK_A_VOLTAGE;
         fdm_matrix[fdm_row * N + fdm_row] = 1;
       }
       else if(current_node == TRACK_B) {
-        sol_matrix[fdm_row] = -TRACK_B_VOLTAGE;
+        sol_matrix[fdm_row] = TRACK_B_VOLTAGE;
         fdm_matrix[fdm_row * N + fdm_row] = 1;
       }
       else if(current_node == INTERFACE) { fdm_matrix[fdm_row * N + fdm_row] = -4*(PERM_1 + PERM_2);}
@@ -191,6 +197,7 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
           else if(temp == TRACK_A){
             fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2); //NOTE not too sure about the addition here
             //In the lab the +5V was on the perm_1 area, so I assume if the track is on the interface we add both perms???
+            // Makes sense to me -- Will
           }
           else if(temp == TRACK_B){
             fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2);

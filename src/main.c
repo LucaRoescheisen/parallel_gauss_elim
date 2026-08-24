@@ -1,5 +1,6 @@
 #include "../include/generate_matrix.h"
-#include "../include/gaussElim.h"
+#include "../include/pgaussElim.h"
+#include "../include/thread_handler.h"
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -21,9 +22,11 @@ int main()  {
   if(x == nullptr) return 0 ;
   
   
+  Thread_Pool* pool = nullptr;
+  pool = generate_pool(4);
 
 
-  gaussElim(r.fdm_matrix, r.sol_matrix, x, r.N);
+  pgaussElim(r.fdm_matrix, r.sol_matrix, x, r.N, pool);
   
   for(int i = 0 ; i < r.N; i++){
     printf("%f,", x[i]);
@@ -42,8 +45,10 @@ int main()  {
   }
   fclose(fp);
 
-
-
+  
+  free(pool->chunks);
+  free(pool->threads);
+  free(pool);
   free(r.fdm_matrix);
   free(r.sol_matrix);
   free(x);
