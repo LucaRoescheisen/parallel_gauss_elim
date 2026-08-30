@@ -7,9 +7,19 @@
 
 
 
-int main()  {
+int main(int argc, char *argv[])  {
+  float step_size = 0.5; //default
+  int num_threads = 2; //default
+  
 
-  float step_size = 0.5;
+  if (argc > 3) {
+    char* endptr;
+    step_size = strtof(argv[1], &endptr);
+    num_threads = atoi(argv[2]);
+    if(num_threads <= 0) { fprintf(stderr, "Error: number of threads must be positive and > than 0"); }
+  }
+  printf("%f", step_size);
+
   //Tip dont use a stepsize less than this, otherwise calloc will use approx 70GB of RAM which is non existent and
   //CPU cores start swap-thrashing :(
 
@@ -23,7 +33,7 @@ int main()  {
   
   
   Thread_Pool* pool = nullptr;
-  pool = generate_pool(4);
+  pool = generate_pool(num_threads);
 
 
   pgaussElim(r.fdm_matrix, r.sol_matrix, x, r.N, pool);
