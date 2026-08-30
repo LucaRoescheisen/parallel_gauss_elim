@@ -12,7 +12,7 @@ int main(int argc, char *argv[])  {
   int num_threads = 2; //default
   
 
-  if (argc > 3) {
+  if (argc > 2) {
     char* endptr;
     step_size = strtof(argv[1], &endptr);
     num_threads = atoi(argv[2]);
