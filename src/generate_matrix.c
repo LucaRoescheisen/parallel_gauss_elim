@@ -7,10 +7,10 @@
 //Function Prototypes
 bool validate_step_size(float step_size);
 void classify_nodes(int** matrix, struct Dimensions dimensions);
-void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N);
+void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N, float track_a_voltage);
 
 
-FDMResult generate_matrix(const float step_size) {
+FDMResult generate_matrix(const float step_size, float track_a_voltage) {
 
   FDMResult result = {.fdm_matrix = nullptr, .sol_matrix=nullptr};
   if(!validate_step_size(step_size)) { 
@@ -69,7 +69,7 @@ FDMResult generate_matrix(const float step_size) {
   for(int i = 0; i < result.N; i++) {result.sol_matrix[i] = 0;}
 
 
-  populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N);
+  populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N, track_a_voltage);
   
 
 
@@ -154,7 +154,7 @@ bool validate_step_size(const float step_size) {
 
 
 
-void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N){
+void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, struct Dimensions dimensions, int N, float track_a_voltage){
   constexpr int dirs[4][2] = {
     {-1,0},
     {1, 0},
@@ -167,7 +167,7 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
       int current_node = ref_matrix[row][col];
       if(current_node == FREE_SPACE || current_node == PCB) {fdm_matrix[fdm_row* N +fdm_row] = -4;}
       else if(current_node == TRACK_A) {
-        sol_matrix[fdm_row] = TRACK_A_VOLTAGE;
+        sol_matrix[fdm_row] = track_a_voltage;
         fdm_matrix[fdm_row * N + fdm_row] = 1;
       }
       else if(current_node == TRACK_B) {

@@ -61,5 +61,5 @@ typedef struct {
   int w, h;
 } FDMResult;
 
-FDMResult generate_matrix(float step_size);
+FDMResult generate_matrix(float step_size, float track_a_voltage);
 #endif

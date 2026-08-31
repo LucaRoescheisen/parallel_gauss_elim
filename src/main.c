@@ -8,22 +8,24 @@
 
 
 int main(int argc, char *argv[])  {
-  float step_size = 0.5; //default
-  int num_threads = 2; //default
-  
+  //Defaults
+  float step_size = 0.5;
+  int num_threads = 2;
+  int track_a_voltage = 5;
 
-  if (argc > 2) {
+  if (argc > 3) {
     char* endptr;
     step_size = strtof(argv[1], &endptr);
     num_threads = atoi(argv[2]);
     if(num_threads <= 0) { fprintf(stderr, "Error: number of threads must be positive and > than 0"); }
+    track_a_voltage = strtof(argv[3], & endptr);
   }
   printf("%f", step_size);
 
   //Tip dont use a stepsize less than this, otherwise calloc will use approx 70GB of RAM which is non existent and
   //CPU cores start swap-thrashing :(
 
-  FDMResult r = generate_matrix(step_size);
+  FDMResult r = generate_matrix(step_size, track_a_voltage);
   if(r.fdm_matrix == nullptr || r.sol_matrix == nullptr || r.N == 0){
     fprintf(stderr, "generate matrix failed");
     return 1;
