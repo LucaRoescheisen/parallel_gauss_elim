@@ -27,7 +27,7 @@ static int broadcast_pivot(double A[], double b[], int n, int j, Process_Pool* p
 
   if(pool->is_parent) {
     if(owner != 0) {
-      if(chread(pool->to_parent[owner], (char*)row,   bytes,         pool->chunk_size) < 0) {
+      if(chread(pool->to_parent[owner], (char*)row,   bytes, pool->chunk_size) < 0) {
         return -1;
       }
       
@@ -41,7 +41,7 @@ static int broadcast_pivot(double A[], double b[], int n, int j, Process_Pool* p
         continue;
       }
       
-      if(chwrite(pool->to_child[w], (const char*)row,   bytes,         pool->chunk_size) < 0) { 
+      if(chwrite(pool->to_child[w], (const char*)row,   bytes, pool->chunk_size) < 0) { 
         return -1;
       }
 
@@ -51,7 +51,7 @@ static int broadcast_pivot(double A[], double b[], int n, int j, Process_Pool* p
     }
   }
   else if(owner == pool->my_id) {
-    if(chwrite(pool->my_write, (const char*)row,   bytes,         pool->chunk_size) < 0) { 
+    if(chwrite(pool->my_write, (const char*)row,   bytes, pool->chunk_size) < 0) { 
       return -1; 
     }
 
@@ -60,7 +60,7 @@ static int broadcast_pivot(double A[], double b[], int n, int j, Process_Pool* p
     }
   }
   else {
-    if(chread(pool->my_read, (char*)row,   bytes,         pool->chunk_size) < 0) {
+    if(chread(pool->my_read, (char*)row,   bytes, pool->chunk_size) < 0) {
       return -1; 
     }
 
@@ -93,10 +93,10 @@ static int send_my_rows(double A[], double b[], int n, Process_Pool* pool) {
       continue; 
     }
 
-    if(chwrite(pool->my_write, (const char*)&A[i * n], bytes,          pool->chunk_size) < 0) { 
+    if(chwrite(pool->my_write, (const char*)&A[i * n], bytes, pool->chunk_size) < 0) { 
     return -1; 
   }
-    if(chwrite(pool->my_write, (const char*)&b[i],     sizeof(double), pool->chunk_size) < 0) {
+    if(chwrite(pool->my_write, (const char*)&b[i], sizeof(double), pool->chunk_size) < 0) {
       return -1; 
     }
   }
@@ -113,10 +113,10 @@ static int collect_rows(double A[], double b[], int n, Process_Pool* pool) {
         continue;
       }
 
-      if(chread(pool->to_parent[w], (char*)&A[i * n], bytes,          pool->chunk_size) < 0) {
+      if(chread(pool->to_parent[w], (char*)&A[i * n], bytes, pool->chunk_size) < 0) {
         return -1; 
       }
-      if(chread(pool->to_parent[w], (char*)&b[i],     sizeof(double), pool->chunk_size) < 0) { 
+      if(chread(pool->to_parent[w], (char*)&b[i], sizeof(double), pool->chunk_size) < 0) { 
         return -1; 
       }
     }
