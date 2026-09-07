@@ -4,18 +4,21 @@ LDLIBS = -lm
 AR = ar
 ARFLAGS = rcs
 
-SRC = $(filter-out src/pgaussElim.c, $(wildcard src/*.c))
+SRC = $(filter-out src/main.c src/fdm_fork.c src/pgaussElim.c src/thread_handler.c \
+                   src/pgaussElimFork.c src/process_handler.c, $(wildcard src/*.c))
 OBJ = $(patsubst src/%.c, obj/%.o, $(SRC))
-DEP = $(OBJ:.o=.d)
+DEP = $(wildcard obj/*.d)
 
-LIBOBJ = obj/pgaussElim.o
+LIBOBJ = obj/pgaussElim.o obj/thread_handler.o obj/pgaussElimFork.o obj/process_handler.o
 LIB = obj/libgauss.a
 
-TARGET = assignment
-all: $(TARGET)
+all: assignment fdm_fork
 
-$(TARGET): $(OBJ) $(LIB)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJ) -Lobj -lgauss $(LDLIBS)
+assignment: obj/main.o $(OBJ) $(LIB)
+	$(CC) $(CFLAGS) -o $@ obj/main.o $(OBJ) -Lobj -lgauss $(LDLIBS)
+
+fdm_fork: obj/fdm_fork.o $(OBJ) $(LIB)
+	$(CC) $(CFLAGS) -o $@ obj/fdm_fork.o $(OBJ) -Lobj -lgauss $(LDLIBS)
 
 $(LIB): $(LIBOBJ)
 	$(AR) $(ARFLAGS) $@ $^
@@ -27,6 +30,6 @@ obj/%.o: src/%.c
 -include $(DEP)
 
 clean:
-	rm -rf obj $(TARGET)
+	rm -rf obj assignment fdm_fork
 
 .PHONY: all clean
