@@ -17,6 +17,8 @@ typedef struct {
 
 }Thread_Data;
 
+
+//Globals for threading
 pthread_barrier_t barrier_start;
 pthread_barrier_t barrier_finished;
 int system_finished = 0;
@@ -33,7 +35,7 @@ void *worker(void *arg) {
 
     for (int i = 0; i < td->length; i++) {
 		  f = td->chunk_A[i * td->n + td->j] / td->pivot;
-		  for (int k = 0; k < td->n; k++) {
+		  for (int k = 0; k < td->j; k++) {
 			  td->chunk_A[i * td->n + k] -= f * td->pivot_row[k];
 		  }
 		  td->chunk_B[i] -= f * td->pivot_b;

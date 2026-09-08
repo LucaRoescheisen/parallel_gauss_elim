@@ -45,17 +45,7 @@ FDMResult generate_matrix(const float step_size, float track_a_voltage) {
     if(ref_matrix[i] == nullptr) { return result; }
   }
 
-
   classify_nodes(ref_matrix, dimensions);
-
-
-  //DEBUG PRINT :) 
-  for(int i = 0; i < dimensions.h; i++){
-    for(int j = 0; j < dimensions.w; j++){
-      printf("%i, ", ref_matrix[i][j]);
-    }
-    printf("\n");
-  }
 
   
   //Second run generate FDM Matrix
@@ -63,19 +53,12 @@ FDMResult generate_matrix(const float step_size, float track_a_voltage) {
   if(result.fdm_matrix == nullptr) { return result; }
 
 
-
   result.sol_matrix = calloc(result.N, sizeof(double));
   if(result.sol_matrix == nullptr) { return result; }
   for(int i = 0; i < result.N; i++) {result.sol_matrix[i] = 0;}
 
-
   populate_fdm(ref_matrix, result.fdm_matrix, result.sol_matrix, dimensions, result.N, track_a_voltage);
   
-
-
-
-
-//So far it seems to work :)
   result.w = dimensions.w;
   result.h = dimensions.h;
 
@@ -83,7 +66,6 @@ FDMResult generate_matrix(const float step_size, float track_a_voltage) {
     free(ref_matrix[i]);
   }
   free(ref_matrix);
-
 
   return result;
 }
@@ -101,7 +83,6 @@ void classify_nodes(int** matrix, struct Dimensions dimensions) {
       else if(row == dimensions.y_track_a && col >= (dimensions.x_track_a) && col <= (dimensions.x_track_a + dimensions.w_track)) {
         matrix[row][col] = TRACK_A;
       }
-      // NOTE: I changed this assuming that TRACK_WIDTH is copper width in cm, i think thats right but leaving this here in case not
       else if(row == dimensions.y_track_b && col >= (dimensions.x_track_b) && col <= (dimensions.x_track_b + dimensions.w_track)) {
         matrix[row][col] = TRACK_B;
       }
@@ -176,6 +157,8 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
       }
       else if(current_node == INTERFACE) { fdm_matrix[fdm_row * N + fdm_row] = -4*(PERM_1 + PERM_2);}
       else if(current_node == INTERFACE_CORNER) { fdm_matrix[fdm_row * N + fdm_row] = (-6*PERM_1 + 2*PERM_2);}
+
+
       for(int i = 0; i < 4; i++){
         int x = row + dirs[i][0];
         int y= col + dirs[i][1];
@@ -195,9 +178,7 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
             fdm_matrix[fdm_row * N + neighbour] = PERM_1 + PERM_2;
           }
           else if(temp == TRACK_A){
-            fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2); //NOTE not too sure about the addition here
-            //In the lab the +5V was on the perm_1 area, so I assume if the track is on the interface we add both perms???
-            // Makes sense to me -- Will
+            fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2); 
           }
           else if(temp == TRACK_B){
             fdm_matrix[fdm_row * N + neighbour] = (PERM_1 + PERM_2);
@@ -207,6 +188,4 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
       fdm_row++;
     }
   }
-  
-  
 }

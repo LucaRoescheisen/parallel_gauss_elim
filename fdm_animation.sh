@@ -14,6 +14,7 @@ for i in $(seq 1 $frame_count)
 do
   ./assignment 0.5 8 $voltage
     gnuplot -e "filename='${OUTPUT_DIR}/frame_${i}.png'" fdm.gp
+    echo "voltage: $voltage"
   voltage=$(echo "$voltage + $voltage_increment" | bc -l)
 done
 
