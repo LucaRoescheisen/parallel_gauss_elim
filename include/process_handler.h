@@ -6,12 +6,14 @@
 
 #define DEFAULT_CHUNK_SIZE 4096
 
-enum io { READ, WRITE };
+enum { READ, WRITE };
 
-enum layout { LAYOUT_CYCLIC, LAYOUT_BLOCK };
+enum { CYCLIC, BLOCK };
+
+enum { PIPE, SOCKETPAIR };
 
 static inline int owner_of_row(int i, int num_procs, int layout, int n) {
-  if(layout == LAYOUT_CYCLIC) {
+  if(layout == CYCLIC) {
     return i % num_procs;
   }
   int per = (n + num_procs - 1) / num_procs;
@@ -28,18 +30,19 @@ typedef struct {
   int num_procs;
   int chunk_size;
   int layout;
+  int ipc_type;
   int is_parent;
   int my_id;
   int my_read;
   int my_write;
 } Process_Pool;
 
-Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout);
+Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout, int ipc_type);
 
 void reap_process_pool(Process_Pool* pool);
 void free_process_pool(Process_Pool* pool);
 
 int chwrite(int fd, const char* buf, size_t count, int chunk_size);
-int chread (int fd,       char* buf, size_t count, int chunk_size);
+int chread(int fd, char* buf, size_t count, int chunk_size);
 
 #endif

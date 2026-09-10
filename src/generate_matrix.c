@@ -49,7 +49,8 @@ FDMResult generate_matrix(const float step_size, float track_a_voltage) {
   classify_nodes(ref_matrix, dimensions);
 
 
-  //DEBUG PRINT :) 
+  //DEBUG PRINT :)
+  // BRUH -- Will
   for(int i = 0; i < dimensions.h; i++){
     for(int j = 0; j < dimensions.w; j++){
       printf("%i, ", ref_matrix[i][j]);

@@ -7,12 +7,13 @@
 
 static void usage(const char* prog) {
   fprintf(stderr, "usage: %s <step_size> <num_procs> <track_a_voltage>"
-                  " [chunk_size] [cyclic|block]\n", prog);
+                  " [chunk_size] [cyclic|block] [pipe|socket]\n", prog);
 }
 
 int main(int argc, char *argv[]) {
-  int layout = LAYOUT_CYCLIC;
+  int layout = CYCLIC;
   int chunk_size = DEFAULT_CHUNK_SIZE;
+  int ipc_type = PIPE;
 
   if(argc < 4) { 
     usage(argv[0]); return 1;
@@ -26,9 +27,14 @@ int main(int argc, char *argv[]) {
     chunk_size = atoi(argv[4]); 
   }
   if(argc > 5) {
-    if(strcmp(argv[5], "block") == 0) { layout = LAYOUT_BLOCK; }
-    else if(strcmp(argv[5], "cyclic") == 0) { layout = LAYOUT_CYCLIC; }
+    if(strcmp(argv[5], "block") == 0) { layout = BLOCK; }
+    else if(strcmp(argv[5], "cyclic") == 0) { layout = CYCLIC; }
     else { fprintf(stderr, "unknown layout '%s'\n", argv[5]); usage(argv[0]); return 1; }
+  }
+  if(argc > 6) {
+    if(strcmp(argv[6], "socket") == 0) { ipc_type = SOCKETPAIR; }
+    else if(strcmp(argv[6], "pipe") == 0) { ipc_type = PIPE; }
+    else { fprintf(stderr, "unknown ipc type '%s'\n", argv[6]); usage(argv[0]); return 1; }
   }
 
   if(num_procs <= 0) { 
@@ -49,7 +55,7 @@ int main(int argc, char *argv[]) {
     return 1; 
   }
 
-  Process_Pool* pool = generate_process_pool(num_procs, chunk_size, layout);
+  Process_Pool* pool = generate_process_pool(num_procs, chunk_size, layout, ipc_type);
   if(pool == nullptr) {
     fprintf(stderr, "could not create process pool\n");
     free(r.fdm_matrix); free(r.sol_matrix); free(x);

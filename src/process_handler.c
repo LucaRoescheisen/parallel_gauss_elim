@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/wait.h>
+#include <sys/socket.h>
 
 int chwrite(int fd, const char* buf, size_t count, int chunk_size) {
   size_t done = 0;
@@ -48,7 +49,7 @@ int chread(int fd, char* buf, size_t count, int chunk_size) {
   return 0;
 }
 
-Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
+Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout, int ipc_type) {
   if(num_procs <= 0) { 
     return nullptr; 
   }
@@ -60,6 +61,7 @@ Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
   pool->num_procs = num_procs;
   pool->chunk_size = chunk_size;
   pool->layout = layout;
+  pool->ipc_type = ipc_type;
   pool->is_parent = 1;
   pool->my_id = 0;
   pool->my_read = -1;
@@ -68,7 +70,21 @@ Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
   for(int w = 1; w < num_procs; w++) {
     int down[2], up[2];
 
-    if(pipe(down) == -1 || pipe(up) == -1) {
+    if(ipc_type == SOCKETPAIR) {
+      int sv[2];
+
+      if(socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+        perror("socketpair");
+        free_process_pool(pool);
+        return nullptr;
+      }
+
+      down[WRITE] = sv[0];
+      up[READ] = sv[0];
+      down[READ] = sv[1];
+      up[WRITE] = sv[1];
+    }
+    else if(pipe(down) == -1 || pipe(up) == -1) {
       perror("pipe");
       free_process_pool(pool);
       return nullptr;
@@ -89,11 +105,17 @@ Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
       pool->my_write = up[WRITE];
 
       close(down[WRITE]);
-      close(up[READ]);
+
+      if(ipc_type == PIPE) {
+        close(up[READ]);
+      }
 
       for(int p = 1; p < w; p++) {
         close(pool->to_child[p]);
-        close(pool->to_parent[p]);
+
+        if(pool->to_parent[p] != pool->to_child[p]) {
+          close(pool->to_parent[p]);
+        }
       }
 
       return pool;
@@ -104,7 +126,10 @@ Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
       pool->to_parent[w] = up[READ];
 
       close(down[READ]);
-      close(up[WRITE]);
+
+      if(ipc_type == PIPE) {
+        close(up[WRITE]);
+      }
     }
   }
 
@@ -114,7 +139,10 @@ Process_Pool* generate_process_pool(int num_procs, int chunk_size, int layout) {
 void reap_process_pool(Process_Pool* pool) {
   for(int w = 1; w < pool->num_procs; w++) {
     close(pool->to_child[w]);
-    close(pool->to_parent[w]);
+
+    if(pool->to_parent[w] != pool->to_child[w]) {
+      close(pool->to_parent[w]);
+    }
   }
   for(int w = 1; w < pool->num_procs; w++) {
     wait(nullptr);
