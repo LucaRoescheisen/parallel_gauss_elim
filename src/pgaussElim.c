@@ -35,7 +35,7 @@ void *worker(void *arg) {
 
     for (int i = 0; i < td->length; i++) {
 		  f = td->chunk_A[i * td->n + td->j] / td->pivot;
-		  for (int k = 0; k < td->j; k++) {
+		  for (int k = td->j+1; k < td->n; k++) {
 			  td->chunk_A[i * td->n + k] -= f * td->pivot_row[k];
 		  }
 		  td->chunk_B[i] -= f * td->pivot_b;
