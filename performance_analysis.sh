@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 case $# in
 0)
   runs=3
@@ -23,20 +22,16 @@ esac
 voltage=5
 results=results
 
-
-# what to sweep
 proc_list="1 2 4 6 8 10 12"
 chunk_list="512 1024 4096 16384 65536"
 chunk=4096
 fixed_procs=4
-
 
 elapsed()
 {
   sed -n 's/.*[ ]\([0-9:.]*\)elapsed.*/\1/p' |
   awk -F: '{ if (NF == 2) print $1 * 60 + $2; else print $1 }'
 }
-
 
 measure()
 {
@@ -56,7 +51,6 @@ then
   mkdir $results
 fi
 
-# clean first so an old build is never timed by mistake
 echo "building"
 make clean > /dev/null 2>&1
 make > /dev/null 2>&1
@@ -73,8 +67,6 @@ then
   exit 1
 fi
 
-# The first run of each binary pays for loading it off disk and faulting its
-# memory in, which inflated the 1-process baseline. Run each once, discard it.
 echo "warming up"
 ./fdm_fork $step 1 $voltage > /dev/null 2>&1
 ./assignment $step 1 $voltage > /dev/null 2>&1
@@ -82,9 +74,6 @@ echo "warming up"
 echo "averaging $runs runs at step size $step"
 echo
 
-# One pass over the process counts, measuring every variant at each count.
-# Each row feeds a different analysis, so they go to separate files for
-# gnuplot, but they share one loop so the slow runs are not repeated.
 echo "# procs fork pthreads" > $results/procs.dat
 echo "# procs pipe socket" > $results/ipc.dat
 echo "# procs cyclic block" > $results/layout.dat
@@ -107,8 +96,6 @@ done
 
 echo
 
-# Chunk size only affects the fork version, so hold the process count fixed
-# and sweep the transfer size instead.
 echo "# chunk pipe socket" > $results/chunk.dat
 
 echo "sweeping chunk sizes at $fixed_procs processes"
@@ -130,9 +117,6 @@ echo "=================================================================="
 echo " PERFORMANCE REPORT"
 echo "=================================================================="
 
-# speedup = time on 1 / time on p, efficiency = speedup / p
-# NR == 2 is the first data row (NR == 1 is the header), so it is the
-# single-process baseline everything else is compared against
 echo
 echo "--- execution time vs processes / threads (analyses C and D) ---"
 printf "%6s %9s %8s %7s %11s %8s %7s\n" procs fork speedup eff threads speedup eff
@@ -239,13 +223,6 @@ END {
 }
 ' $results/chunk.dat
 
-# Amdahl's law: with a serial fraction f, the speedup on p cores is
-#   S = 1 / (f + (1 - f) / p)
-# Solving that for f gives the serial fraction implied by a measured speedup:
-#   f = (1/S - 1/p) / (1 - 1/p)
-# The p = 1 row is skipped (NR > 2) because 1 - 1/p is zero there.
-# If f is roughly constant it is genuine serial code; if it grows with p the
-# extra time is overhead that gets worse as processes are added.
 echo
 echo "--- Amdahl's law, estimated serial fraction (analysis A) ---"
 printf "%6s %13s %13s\n" procs "fork f" "pthreads f"
@@ -328,8 +305,6 @@ END {
     printf("pthreads: not measurable, timings too small to resolve\n");
   }
 
-  # a serial fraction only means something between 0 and 1, so clamp it
-  # for the plot and let the text above explain anything outside that
   if (mf < 0) {
     mf = 0;
   }
@@ -348,8 +323,6 @@ END {
 
 read f_fork f_thr < $results/amdahl.dat
 
-# Speedup is time on 1 / time on p. gnuplot cannot easily pick out the first
-# row as a baseline, so awk works it out into its own file first.
 awk '
 NR == 2 {
   base_fork = $2;
@@ -373,7 +346,6 @@ NR > 1 {
 echo
 echo "generating plots"
 
-# The heredoc is unquoted so $results expands inside it.
 gnuplot << EOF
 set terminal svg size 800,500 font "Arial,12"
 set grid
