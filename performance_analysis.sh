@@ -239,6 +239,115 @@ END {
 }
 ' $results/chunk.dat
 
+# Amdahl's law: with a serial fraction f, the speedup on p cores is
+#   S = 1 / (f + (1 - f) / p)
+# Solving that for f gives the serial fraction implied by a measured speedup:
+#   f = (1/S - 1/p) / (1 - 1/p)
+# The p = 1 row is skipped (NR > 2) because 1 - 1/p is zero there.
+# If f is roughly constant it is genuine serial code; if it grows with p the
+# extra time is overhead that gets worse as processes are added.
+echo
+echo "--- Amdahl's law, estimated serial fraction (analysis A) ---"
+printf "%6s %13s %13s\n" procs "fork f" "pthreads f"
+
+awk -v out=$results/amdahl.dat '
+NR == 2 {
+  base_fork = $2;
+  base_thr = $3;
+}
+NR > 2 {
+  p = $1;
+  fork_txt = "-";
+  thr_txt = "-";
+
+  if ($2 > 0 && base_fork > 0) {
+    sf = base_fork / $2;
+    ff = (1 / sf - 1 / p) / (1 - 1 / p);
+    sum_fork += ff;
+    n_fork++;
+    fork_txt = sprintf("%.3f", ff);
+  }
+  if ($3 > 0 && base_thr > 0) {
+    st = base_thr / $3;
+    ft = (1 / st - 1 / p) / (1 - 1 / p);
+    sum_thr += ft;
+    n_thr++;
+    thr_txt = sprintf("%.3f", ft);
+  }
+
+  printf("%6d %13s %13s\n", p, fork_txt, thr_txt);
+}
+END {
+  mf = 0;
+  mt = 0;
+
+  if (n_fork > 0) {
+    mf = sum_fork / n_fork;
+  }
+  if (n_thr > 0) {
+    mt = sum_thr / n_thr;
+  }
+
+  printf("\n");
+
+  if (n_fork > 0) {
+    if (mf > 1) {
+      printf("fork:     serial fraction %.3f, above 1: slower than 1 process, overhead dominates so Amdahl does not apply\n", mf);
+    }
+    else if (mf < 0) {
+      printf("fork:     serial fraction %.3f, below 0: faster than ideal, timer noise on a tiny problem\n", mf);
+    }
+    else {
+      printf("fork:     serial fraction %.3f (%.1f%%)", mf, mf * 100);
+      if (mf > 0) {
+        printf(", Amdahl limit %.2fx", 1 / mf);
+      }
+      printf("\n");
+    }
+  }
+  else {
+    printf("fork:     not measurable, timings too small to resolve\n");
+  }
+
+  if (n_thr > 0) {
+    if (mt > 1) {
+      printf("pthreads: serial fraction %.3f, above 1: slower than 1 process, overhead dominates so Amdahl does not apply\n", mt);
+    }
+    else if (mt < 0) {
+      printf("pthreads: serial fraction %.3f, below 0: faster than ideal, timer noise on a tiny problem\n", mt);
+    }
+    else {
+      printf("pthreads: serial fraction %.3f (%.1f%%)", mt, mt * 100);
+      if (mt > 0) {
+        printf(", Amdahl limit %.2fx", 1 / mt);
+      }
+      printf("\n");
+    }
+  }
+  else {
+    printf("pthreads: not measurable, timings too small to resolve\n");
+  }
+
+  # a serial fraction only means something between 0 and 1, so clamp it
+  # for the plot and let the text above explain anything outside that
+  if (mf < 0) {
+    mf = 0;
+  }
+  if (mf > 1) {
+    mf = 1;
+  }
+  if (mt < 0) {
+    mt = 0;
+  }
+  if (mt > 1) {
+    mt = 1;
+  }
+  print mf, mt > out;
+}
+' $results/procs.dat
+
+read f_fork f_thr < $results/amdahl.dat
+
 # Speedup is time on 1 / time on p. gnuplot cannot easily pick out the first
 # row as a baseline, so awk works it out into its own file first.
 awk '
@@ -277,12 +386,16 @@ set ylabel "time (s)"
 plot "$results/procs.dat" using 1:2 with linespoints title "fork", \
      "$results/procs.dat" using 1:3 with linespoints title "pthreads"
 
+amdahl(p, f) = 1 / (f + (1 - f) / p)
+
 set output "$results/speedup.svg"
-set title "Speedup vs processes / threads"
+set title "Speedup vs processes / threads, against Amdahl law"
 set ylabel "speedup"
 plot "$results/speedup.dat" using 1:2 with linespoints title "fork", \
      "$results/speedup.dat" using 1:3 with linespoints title "pthreads", \
-     x with lines dashtype 2 title "ideal"
+     x with lines dashtype 2 title "ideal", \
+     amdahl(x, $f_fork) with lines dashtype 3 title sprintf("Amdahl, fork f = %.3f", $f_fork), \
+     amdahl(x, $f_thr) with lines dashtype 3 title sprintf("Amdahl, pthreads f = %.3f", $f_thr)
 
 set output "$results/ipc.svg"
 set title "Pipes vs socketpairs"
