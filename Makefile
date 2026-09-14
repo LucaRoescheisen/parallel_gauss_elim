@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -std=c2x -Wall -Wextra -g -O3 -march=native -MMD -MP -fsanitize=address
+CFLAGS = -std=c2x -Wall -Wextra -g -O3 -march=native -MMD -MP
 LDLIBS = -lm
 AR = ar
 ARFLAGS = rcs

@@ -23,6 +23,7 @@ esac
 voltage=5
 results=results
 
+
 # what to sweep
 proc_list="1 2 4 6 8 10 12"
 chunk_list="512 1024 4096 16384 65536"
@@ -55,7 +56,9 @@ then
   mkdir $results
 fi
 
+# clean first so an old build is never timed by mistake
 echo "building"
+make clean > /dev/null 2>&1
 make > /dev/null 2>&1
 
 if [ ! -x ./fdm_fork ]
@@ -69,6 +72,12 @@ then
   echo "error: assignment did not build"
   exit 1
 fi
+
+# The first run of each binary pays for loading it off disk and faulting its
+# memory in, which inflated the 1-process baseline. Run each once, discard it.
+echo "warming up"
+./fdm_fork $step 1 $voltage > /dev/null 2>&1
+./assignment $step 1 $voltage > /dev/null 2>&1
 
 echo "averaging $runs runs at step size $step"
 echo
@@ -229,3 +238,72 @@ END {
   printf("fastest socket chunk: %d bytes (%.2fs)\n", sock_chunk, best_sock);
 }
 ' $results/chunk.dat
+
+# Speedup is time on 1 / time on p. gnuplot cannot easily pick out the first
+# row as a baseline, so awk works it out into its own file first.
+awk '
+NR == 2 {
+  base_fork = $2;
+  base_thr = $3;
+}
+NR > 1 {
+  fs = 0;
+  ts = 0;
+
+  if ($2 > 0) {
+    fs = base_fork / $2;
+  }
+  if ($3 > 0) {
+    ts = base_thr / $3;
+  }
+
+  print $1, fs, ts;
+}
+' $results/procs.dat > $results/speedup.dat
+
+echo
+echo "generating plots"
+
+# The heredoc is unquoted so $results expands inside it.
+gnuplot << EOF
+set terminal svg size 800,500 font "Arial,12"
+set grid
+set key top left
+
+set output "$results/time.svg"
+set title "Execution time vs processes / threads"
+set xlabel "processes / threads"
+set ylabel "time (s)"
+plot "$results/procs.dat" using 1:2 with linespoints title "fork", \
+     "$results/procs.dat" using 1:3 with linespoints title "pthreads"
+
+set output "$results/speedup.svg"
+set title "Speedup vs processes / threads"
+set ylabel "speedup"
+plot "$results/speedup.dat" using 1:2 with linespoints title "fork", \
+     "$results/speedup.dat" using 1:3 with linespoints title "pthreads", \
+     x with lines dashtype 2 title "ideal"
+
+set output "$results/ipc.svg"
+set title "Pipes vs socketpairs"
+set ylabel "time (s)"
+plot "$results/ipc.dat" using 1:2 with linespoints title "pipe", \
+     "$results/ipc.dat" using 1:3 with linespoints title "socketpair"
+
+set output "$results/layout.svg"
+set title "Cyclic vs block row allocation"
+plot "$results/layout.dat" using 1:2 with linespoints title "cyclic", \
+     "$results/layout.dat" using 1:3 with linespoints title "block"
+
+set output "$results/chunk.svg"
+set title "Chunk size at $fixed_procs processes"
+set xlabel "chunk size (bytes)"
+set logscale x 2
+plot "$results/chunk.dat" using 1:2 with linespoints title "pipe", \
+     "$results/chunk.dat" using 1:3 with linespoints title "socketpair"
+
+unset output
+EOF
+
+echo "plots written to $results/"
+ls $results/*.svg
