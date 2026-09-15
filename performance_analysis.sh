@@ -67,7 +67,7 @@ then
   exit 1
 fi
 
-echo "warming up"
+
 ./fdm_fork $step 1 $voltage > /dev/null 2>&1
 ./assignment $step 1 $voltage > /dev/null 2>&1
 
