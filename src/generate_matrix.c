@@ -156,7 +156,7 @@ void populate_fdm(int** ref_matrix, double* fdm_matrix, double* sol_matrix, stru
         fdm_matrix[fdm_row * N + fdm_row] = 1;
       }
       else if(current_node == INTERFACE) { fdm_matrix[fdm_row * N + fdm_row] = -4*(PERM_1 + PERM_2);}
-      else if(current_node == INTERFACE_CORNER) { fdm_matrix[fdm_row * N + fdm_row] = (-6*PERM_1 + 2*PERM_2);}
+      else if(current_node == INTERFACE_CORNER) { fdm_matrix[fdm_row * N + fdm_row] = -(6*PERM_1 + 2*PERM_2);}
 
 
       for(int i = 0; i < 4; i++){
