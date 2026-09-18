@@ -1,0 +1,86 @@
+building
+
+averaging 3 runs at step size 0.5
+
+sweeping process and thread counts
+  procs=1  pipe=19.78  socket=19.67  block=19.81  threads=13.68
+  procs=2  pipe=13.00  socket=13.02  block=16.74  threads=9.54
+  procs=4  pipe=11.25  socket=11.27  block=12.33  threads=7.64
+  procs=6  pipe=11.30  socket=11.08  block=11.59  threads=7.82
+  procs=8  pipe=12.68  socket=13.91  block=12.53  threads=9.43
+  procs=10  pipe=12.76  socket=13.36  block=11.37  threads=9.07
+  procs=12  pipe=11.80  socket=13.45  block=11.52  threads=10.78
+
+sweeping chunk sizes at 4 processes
+  chunk=512  pipe=14.36  socket=13.89
+  chunk=1024  pipe=13.73  socket=14.67
+  chunk=4096  pipe=13.53  socket=11.70
+  chunk=16384  pipe=12.37  socket=13.67
+  chunk=65536  pipe=12.60  socket=15.12
+
+data written to results/
+
+==================================================================
+ PERFORMANCE REPORT
+==================================================================
+
+--- execution time vs processes / threads (analyses C and D) ---
+ procs      fork  speedup     eff     threads  speedup     eff
+     1    19.78s    1.00x    100%      13.68s    1.00x    100%
+     2    13.00s    1.52x     76%       9.54s    1.43x     72%
+     4    11.25s    1.76x     44%       7.64s    1.79x     45%
+     6    11.30s    1.75x     29%       7.82s    1.75x     29%
+     8    12.68s    1.56x     19%       9.43s    1.45x     18%
+    10    12.76s    1.55x     16%       9.07s    1.51x     15%
+    12    11.80s    1.68x     14%      10.78s    1.27x     11%
+
+--- pipes vs socketpairs (analysis B) ---
+ procs      pipe    socket   faster    diff
+     1    19.78s    19.67s   socket    0.6%
+     2    13.00s    13.02s     pipe    0.2%
+     4    11.25s    11.27s     pipe    0.2%
+     6    11.30s    11.08s   socket    1.9%
+     8    12.68s    13.91s     pipe    8.8%
+    10    12.76s    13.36s     pipe    4.5%
+    12    11.80s    13.45s     pipe   12.3%
+
+--- cyclic vs block row allocation (analysis E) ---
+ procs    cyclic     block   faster    diff
+     1    19.78s    19.81s   cyclic    0.2%
+     2    13.00s    16.74s   cyclic   22.3%
+     4    11.25s    12.33s   cyclic    8.8%
+     6    11.30s    11.59s   cyclic    2.5%
+     8    12.68s    12.53s    block    1.2%
+    10    12.76s    11.37s    block   10.9%
+    12    11.80s    11.52s    block    2.4%
+
+--- chunk size at 4 processes (analysis B) ---
+  chunk      pipe    socket
+    512    14.36s    13.89s
+   1024    13.73s    14.67s
+   4096    13.53s    11.70s
+  16384    12.37s    13.67s
+  65536    12.60s    15.12s
+
+fastest pipe chunk:   16384 bytes (12.37s)
+fastest socket chunk: 4096 bytes (11.70s)
+
+--- Amdahl's law, estimated serial fraction (analysis A) ---
+ procs        fork f    pthreads f
+     2         0.314         0.395
+     4         0.425         0.411
+     6         0.486         0.486
+     8         0.590         0.645
+    10         0.606         0.626
+    12         0.560         0.769
+
+fork:     serial fraction 0.497 (49.7%), Amdahl limit 2.01x
+pthreads: serial fraction 0.555 (55.5%), Amdahl limit 1.80x
+
+generating plots
+plots written to results/
+results/chunk.svg
+results/ipc.svg
+results/layout.svg
+results/speedup.svg
+results/time.svg
